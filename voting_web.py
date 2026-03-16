@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, send_file
+from flask import Flask, render_template, request, redirect, send_file, session
 import psycopg2
 import csv
 import os 
@@ -13,6 +13,7 @@ password = os.getenv("DB_PASSWORD")
 
 
 app = Flask(__name__)
+app.secret_key = "supersecret"
 
 conn = psycopg2.connect(
     host=host,
@@ -25,6 +26,10 @@ cur = conn.cursor()
 
 @app.route("/",methods=["GET","POST"])
 def index():
+
+
+    if "admin" not in session:
+        return redirect("/login")
 
     error=None
 
@@ -60,6 +65,39 @@ def index():
             error="You already voted!"
 
     return render_template("index.html", candidates=candidates, error=error)
+
+@app.route("/login", methods=["GET","POST"])
+def login():
+
+    error=None
+
+    if request.method=="POST":
+
+        username=request.form["username"]
+        password=request.form["password"]
+
+        cur.execute(
+        "SELECT * FROM admins WHERE username=%s AND password=%s",
+        (username,password)
+        )
+
+        admin=cur.fetchone()
+
+        if admin:
+
+            session["admin"]=username
+            return redirect("/")
+
+        else:
+            error="Invalid login"
+
+    return render_template("login.html",error=error)
+
+@app.route("/logout")
+def logout():
+
+    session.pop("admin",None)
+    return redirect("/login")
 
 @app.route("/results")
 def results():

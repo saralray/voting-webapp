@@ -13,7 +13,16 @@
 
 <div class="card-body">
 
-<h2 class="text-center mb-4">🗳 Voting System</h2>
+<div class="d-flex justify-content-between align-items-center mb-3">
+
+<h2>🗳 Voting System</h2>
+
+<div>
+<span class="me-3">Logged in as {{session.admin}}</span>
+<a href="/logout" class="btn btn-danger btn-sm">Logout</a>
+</div>
+
+</div>
 
 <form method="POST">
 
@@ -22,7 +31,7 @@
 <input class="form-control" name="name" required>
 </div>
 
-<label>Choose Candidate</label>
+<label class="mb-2">Choose Candidate</label>
 
 {% for c in candidates %}
 
@@ -42,9 +51,11 @@
 </form>
 
 {% if error %}
+
 <div class="alert alert-danger mt-3">
 {{error}}
 </div>
+
 {% endif %}
 
 <hr>
