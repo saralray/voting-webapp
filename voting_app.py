@@ -94,7 +94,7 @@ def google_callback():
     token = google.authorize_access_token()
 
     # ✅ ดึง user จาก Google API
-    user = google.get("userinfo").json()
+    user = google.get("https://www.googleapis.com/oauth2/v3/userinfo").json()
 
     session["user"] = {
         "name": user["name"],
@@ -222,4 +222,3 @@ def export_excel():
     return send_file(file,as_attachment=True)
 
 app.run(host="0.0.0.0",port=8080)
-
