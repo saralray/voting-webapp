@@ -92,7 +92,9 @@ def login():
 def google_callback():
 
     token = google.authorize_access_token()
-    user = google.parse_id_token(token)
+
+    # ✅ ดึง user จาก Google API
+    user = google.get("userinfo").json()
 
     session["user"] = {
         "name": user["name"],
