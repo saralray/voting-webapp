@@ -3,6 +3,8 @@ import psycopg2
 import os
 from dotenv import load_dotenv
 from openpyxl import Workbook
+from authlib.integrations.flask_client import OAuth
+from flask import session, url_for
 
 load_dotenv()
 
@@ -17,59 +19,117 @@ conn = psycopg2.connect(
 
 cur = conn.cursor()
 
+app.secret_key = os.getenv("SECRET_KEY")
+
+oauth = OAuth(app)
+
+google = oauth.register(
+    name="google",
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={
+        "scope": "openid email profile"
+    }
+)
 
 @app.route("/",methods=["GET","POST"])
 def home():
 
+    if "user" not in session:
+        return redirect("/login_page")
+
+    email = session["user"]["email"]
+
     if request.method=="POST":
 
-        name=request.form["name"]
         candidate=request.form["candidate"]
 
         try:
 
-            cur.execute("SELECT id FROM users WHERE name=%s",(name,))
+            # เช็ค user จาก email
+            cur.execute("SELECT id FROM users WHERE name=%s",(email,))
             user=cur.fetchone()
 
-            if not user:
+            if user:
+                # ❌ ถ้าเคยโหวตแล้ว
+                return "You already voted"
 
-                cur.execute(
+            # ✅ สร้าง user ใหม่
+            cur.execute(
                 "INSERT INTO users (name) VALUES (%s) RETURNING id",
-                (name,)
-                )
+                (email,)
+            )
 
-                uid=cur.fetchone()[0]
+            uid=cur.fetchone()[0]
 
-                cur.execute(
+            # ✅ insert vote
+            cur.execute(
                 "INSERT INTO votes (user_id,candidate_id) VALUES (%s,%s)",
                 (uid,candidate)
-                )
+            )
 
-                conn.commit()
+            conn.commit()
 
-        except:
+        except Exception as e:
             conn.rollback()
+            return str(e)
 
     cur.execute("SELECT * FROM candidates")
     candidates=cur.fetchall()
 
     return render_template("home.html",candidates=candidates)
 
+@app.route("/login")
+def login():
+    redirect_uri = url_for("google_callback", _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+@app.route("/login/google/callback")
+def google_callback():
+
+    token = google.authorize_access_token()
+    user = google.parse_id_token(token)
+
+    session["user"] = {
+        "name": user["name"],
+        "email": user["email"],
+        "picture": user["picture"]
+    }
+
+    return redirect("/")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
+
+@app.route("/login_page")
+def login_page():
+    return render_template("login.html")
+
 @app.route("/admin",methods=["GET","POST"])
 def admin():
 
-    if request.method=="POST":
+    if "user" not in session:
+        return redirect("/login")
 
+    email = session["user"]["email"]
+
+    cur.execute("SELECT * FROM admins WHERE email=%s",(email,))
+    admin = cur.fetchone()
+
+    if not admin:
+        return "Access Denied"
+
+    if request.method=="POST":
         name=request.form["name"]
 
         if name:
-
             cur.execute("INSERT INTO candidates (name) VALUES (%s)",(name,))
-
             conn.commit()
 
     cur.execute("SELECT * FROM candidates")
-
     candidates=cur.fetchall()
 
     return render_template("admin.html",candidates=candidates)
