@@ -10,76 +10,69 @@ This is a web-based voting system built with Flask and PostgreSQL. It supports G
 - Real-time dashboard using Chart.js
 - Export voting results to Excel
 - PostgreSQL database backend
-- Deployed behind Cloudflare with HTTPS support
+- Deployed behind Cloudflare with HTTPS supportflask psycopg2-binary python-dotenv openpyxl authlib werkzeug
 
 ## Requirements
 
 - Python 3.8+
 - PostgreSQL
-- Nginx (optional but recommended)
 - Cloudflare (for DNS and HTTPS)
 
 ## Installation
 
 ### Clone the repository
 
-git clone https://github.com/yourusername/voting-webapp.git
-cd voting-webapp
-
-### Create virtual environment
-
-python3 -m venv venv
-source venv/bin/activate
+    git clone https://github.com/saralray/voting-webapp.git
+    cd voting-webapp
 
 ### Install dependencies
-
-pip install flask psycopg2-binary python-dotenv openpyxl authlib werkzeug
+    
+    pip install -r requirements.txt
 
 ### Setup environment variables
 
 Create a .env file:
 
-DB_HOST=localhost
-DB_NAME=student
-DB_USER=student
-DB_PASS=yourpassword
-
-SECRET_KEY=your_secret_key
-
-GOOGLE_CLIENT_ID=your_client_id
-GOOGLE_CLIENT_SECRET=your_client_secret
+    DB_HOST=localhost
+    DB_NAME=student
+    DB_USER=student
+    DB_PASS=yourpassword
+    
+    SECRET_KEY=your_secret_key
+    
+    GOOGLE_CLIENT_ID=your_client_id
+    GOOGLE_CLIENT_SECRET=your_client_secret
 
 ## Database Setup
 
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    name TEXT UNIQUE
-);
+    CREATE TABLE users (
+        id SERIAL PRIMARY KEY,
+        name TEXT UNIQUE
+    );
 
-CREATE TABLE candidates (
-    id SERIAL PRIMARY KEY,
-    name TEXT
-);
+    CREATE TABLE candidates (
+        id SERIAL PRIMARY KEY,
+        name TEXT
+    );
 
-CREATE TABLE votes (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    candidate_id INTEGER REFERENCES candidates(id),
-    UNIQUE(user_id)
-);
+    CREATE TABLE votes (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        candidate_id INTEGER REFERENCES candidates(id),flask psycopg2-binary python-dotenv openpyxl authlib werkzeug
+        UNIQUE(user_id)
+    );
 
-CREATE TABLE admins (
-    id SERIAL PRIMARY KEY,
-    email TEXT UNIQUE
-);
+    CREATE TABLE admins (
+        id SERIAL PRIMARY KEY,
+        email TEXT UNIQUE
+    );
 
 ## Run
 
-python3 app.py
+    python3 voting_app.py
 
 ## Deployment Notes
 
-- Use Nginx to proxy port 80 to 8080
 - Use Cloudflare proxy with SSL set to Full (strict)
 - Google OAuth redirect URI must be HTTPS domain
 
