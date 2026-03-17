@@ -33,10 +33,10 @@ This is a web-based voting system built with Flask and PostgreSQL. It supports G
 
 Create a .env file:
 
-    DB_HOST=localhost
-    DB_NAME=student
-    DB_USER=student
-    DB_PASS=yourpassword
+    DB_HOST=your_database_host
+    DB_NAME=your_database_name
+    DB_USER=your_database_user
+    DB_PASS=your_database_password
     
     SECRET_KEY=your_secret_key
     
