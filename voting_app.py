@@ -5,10 +5,13 @@ from dotenv import load_dotenv
 from openpyxl import Workbook
 from authlib.integrations.flask_client import OAuth
 from flask import session, url_for
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv()
 
 app = Flask(__name__)
+
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 conn = psycopg2.connect(
     host=os.getenv("DB_HOST"),
@@ -82,7 +85,7 @@ def home():
 
 @app.route("/login")
 def login():
-    redirect_uri = url_for("google_callback", _external=True)
+    redirect_uri = url_for("google_callback", _external=True, _scheme="https")
     return google.authorize_redirect(redirect_uri)
 
 @app.route("/login/google/callback")
@@ -216,5 +219,5 @@ def export_excel():
 
     return send_file(file,as_attachment=True)
 
-app.run(host="0.0.0.0",port=5000)
+app.run(host="0.0.0.0",port=8080)
 

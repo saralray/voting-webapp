@@ -4,3 +4,4 @@ Flask
 openpyxl
 authlib
 requests
+werkzeug
