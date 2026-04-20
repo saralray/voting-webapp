@@ -1,73 +1,265 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
+<title>Wheel Results Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+body{
+margin:0;
+font-family:"Space Grotesk",sans-serif;
+background:
+radial-gradient(circle at top left, rgba(255,209,102,0.32), transparent 25%),
+linear-gradient(180deg, #fcf7ea 0%, #f7efe0 100%);
+color:#112a46;
+min-height:100vh;
+}
 
+.shell{
+max-width:1200px;
+margin:0 auto;
+padding:32px 18px 40px;
+}
+
+.hero{
+display:flex;
+justify-content:space-between;
+align-items:flex-start;
+gap:16px;
+margin-bottom:22px;
+flex-wrap:wrap;
+}
+
+.hero h1{
+margin:0;
+font-size:clamp(2rem,4vw,3.2rem);
+line-height:0.95;
+}
+
+.hero p{
+margin:10px 0 0;
+max-width:52ch;
+color:rgba(17,42,70,0.72);
+}
+
+.actions{
+display:flex;
+gap:12px;
+flex-wrap:wrap;
+}
+
+.ghost-btn{
+display:inline-flex;
+align-items:center;
+justify-content:center;
+padding:12px 16px;
+border-radius:16px;
+background:#fff;
+border:1px solid rgba(17,42,70,0.12);
+color:#112a46;
+text-decoration:none;
+font-weight:700;
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(3, minmax(0, 1fr));
+gap:18px;
+margin-bottom:18px;
+}
+
+.card{
+background:rgba(255,255,255,0.85);
+border:1px solid rgba(17,42,70,0.1);
+border-radius:24px;
+padding:22px;
+box-shadow:0 18px 45px rgba(17,42,70,0.08);
+}
+
+.kicker{
+font-size:0.78rem;
+font-weight:700;
+letter-spacing:0.08em;
+text-transform:uppercase;
+color:rgba(17,42,70,0.55);
+}
+
+.metric{
+margin-top:8px;
+font-size:2.2rem;
+font-weight:700;
+line-height:1;
+}
+
+.layout{
+display:grid;
+grid-template-columns:1.05fr 0.95fr;
+gap:18px;
+}
+
+.table-wrap{
+overflow:auto;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:8px;
+}
+
+th, td{
+padding:14px 10px;
+border-bottom:1px solid rgba(17,42,70,0.08);
+text-align:left;
+}
+
+th{
+font-size:0.8rem;
+letter-spacing:0.06em;
+text-transform:uppercase;
+color:rgba(17,42,70,0.56);
+}
+
+.empty{
+margin-top:18px;
+padding:16px;
+border-radius:16px;
+background:#fff8ee;
+border:1px dashed rgba(17,42,70,0.15);
+color:rgba(17,42,70,0.72);
+}
+
+@media (max-width: 900px){
+.grid,
+.layout{
+grid-template-columns:1fr;
+}
+}
+</style>
 </head>
+<body>
+<div class="shell">
+  <div class="hero">
+    <div>
+      <h1>Wheel Results Dashboard</h1>
+      <p>Live summary of wheel outcomes. This page refreshes automatically and shows both totals and the current leaderboard.</p>
+    </div>
+    <div class="actions">
+      <a href="/excel" class="ghost-btn">Export Excel</a>
+      <a href="/" class="ghost-btn">Back to Wheel</a>
+    </div>
+  </div>
 
-<body class="bg-dark text-white">
+  <div class="grid">
+    <section class="card">
+      <div class="kicker">Total Spins</div>
+      <div class="metric" id="totalVotes">0</div>
+    </section>
+    <section class="card">
+      <div class="kicker">Wheel Options</div>
+      <div class="metric" id="totalOptions">0</div>
+    </section>
+    <section class="card">
+      <div class="kicker">Current Leader</div>
+      <div class="metric" id="leaderName">Waiting</div>
+    </section>
+  </div>
 
-<div class="container py-5">
+  <div class="layout">
+    <section class="card">
+      <div class="kicker">Distribution</div>
+      <canvas id="chart" height="280"></canvas>
+    </section>
 
-<h2 class="text-center mb-4">📊 Voting Results</h2>
-
-<canvas id="chart"></canvas>
-
-<br>
-
-<div class="text-center">
-
-<a href="/excel" class="btn btn-success">Download Excel</a>
-
-<a href="/" class="btn btn-light">Back</a>
-
-</div>
-
+    <section class="card">
+      <div class="kicker">Leaderboard</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Option</th>
+              <th>Votes</th>
+              <th>Share</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboardBody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="emptyState">Waiting for the first spin.</div>
+    </section>
+  </div>
 </div>
 
 <script>
+const colors = ["#f25f5c", "#247ba0", "#70c1b3", "#ffbf69", "#8d99ae", "#ef476f", "#06d6a0", "#ffd166"];
+const totalVotes = document.getElementById("totalVotes");
+const totalOptions = document.getElementById("totalOptions");
+const leaderName = document.getElementById("leaderName");
+const leaderboardBody = document.getElementById("leaderboardBody");
+const emptyState = document.getElementById("emptyState");
 
-async function loadData(){
+const chart = new Chart(document.getElementById("chart"), {
+  type: "doughnut",
+  data: {
+    labels: [],
+    datasets: [{
+      data: [],
+      backgroundColor: colors,
+      borderWidth: 0
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: "bottom"
+      }
+    }
+  }
+});
 
-const res = await fetch("/data")
+function renderLeaderboard(rows) {
+  leaderboardBody.innerHTML = "";
 
-const data = await res.json()
+  if (!rows.length || rows.every((row) => row.votes === 0)) {
+    emptyState.style.display = "block";
+    return;
+  }
 
-chart.data.labels=data.labels
-
-chart.data.datasets[0].data=data.votes
-
-chart.update()
-
+  emptyState.style.display = "none";
+  rows.forEach((row) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${row.name}</td>
+      <td>${row.votes}</td>
+      <td>${row.share}%</td>
+    `;
+    leaderboardBody.appendChild(tr);
+  });
 }
 
-const chart=new Chart(document.getElementById("chart"),{
+async function loadData() {
+  const res = await fetch("/data");
+  const data = await res.json();
 
-type:"bar",
+  chart.data.labels = data.labels;
+  chart.data.datasets[0].data = data.votes;
+  chart.data.datasets[0].backgroundColor = data.labels.map((_, index) => colors[index % colors.length]);
+  chart.update();
 
-data:{
-labels:[],
-datasets:[{
-label:"Votes",
-data:[],
-backgroundColor:"#4facfe"
-}]
+  totalVotes.textContent = data.total_votes;
+  totalOptions.textContent = data.total_options;
+  leaderName.textContent = data.leaderboard.length ? data.leaderboard[0].name : "Waiting";
+  renderLeaderboard(data.leaderboard);
 }
 
-})
-
-loadData()
-
-setInterval(loadData,3000)
-
+loadData();
+setInterval(loadData, 3000);
 </script>
-
 </body>
-
 </html>

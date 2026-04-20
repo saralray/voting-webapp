@@ -79,13 +79,6 @@ margin:18px 0 16px;
 font-weight:700;
 }
 
-.lede{
-font-size:1.05rem;
-line-height:1.7;
-max-width:56ch;
-color:rgba(17,42,70,0.82);
-}
-
 .user-card{
 margin-top:26px;
 padding:18px;
@@ -342,13 +335,6 @@ color:var(--ink);
 font-weight:700;
 }
 
-.footer-links{
-display:flex;
-gap:12px;
-flex-wrap:wrap;
-margin-top:24px;
-}
-
 @media (max-width: 992px){
 .hero{
 grid-template-columns:1fr;
@@ -386,11 +372,7 @@ flex-direction:column;
   <div class="hero">
     <section class="panel intro">
       <div class="eyebrow">Login Protected Experience</div>
-      <h1>Spin the wheel after Google sign-in.</h1>
-      <p class="lede">
-        Each account gets a single spin. Sign in, spin once, and the system records your result automatically.
-        The wheel is backed by the server, so the final outcome is saved against your Google account.
-      </p>
+      <h1>Lucky Wheel</h1>
 
       <div class="user-card">
         <div class="user-meta">
@@ -403,10 +385,6 @@ flex-direction:column;
         <a href="/logout" class="ghost-btn">Logout</a>
       </div>
 
-      <div class="footer-links">
-        <a href="/dashboard" class="ghost-btn">Live Results</a>
-        <a href="/excel" class="ghost-btn">Export Results</a>
-      </div>
     </section>
 
     <section class="panel wheel-panel">
@@ -472,6 +450,14 @@ flex-direction:column;
           </p>
         </div>
 
+        <div class="status-card">
+          <div>
+            <div class="status-label">Wheel Coverage</div>
+            <div class="status-value">{{ wheel_count }} live segments</div>
+          </div>
+          <div class="result-badge">Protected by login</div>
+        </div>
+
         <div class="list-card">
           <div class="status-label">Wheel Items</div>
           <ul>
@@ -493,6 +479,7 @@ const statusBadge = document.getElementById("statusBadge");
 const resultName = document.getElementById("resultName");
 const resultNote = document.getElementById("resultNote");
 const candidates = {{ candidates|tojson }};
+const csrfToken = {{ csrf_token|tojson }};
 
 let currentRotation = 0;
 let isSpinning = false;
@@ -564,7 +551,8 @@ async function spinWheel() {
     const response = await fetch("/spin", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "X-CSRF-Token": csrfToken
       }
     });
 
@@ -594,6 +582,7 @@ async function spinWheel() {
     statusBadge.textContent = "Error";
     if (error.message.includes("already")) {
       spinButton.textContent = "Spin already used";
+      spinButton.disabled = true;
     } else {
       spinButton.disabled = false;
     }
