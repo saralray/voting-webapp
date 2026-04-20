@@ -1,428 +1,301 @@
-# Voting Web Application
+# Pulse Vote
 
-Online voting system built with Flask, PostgreSQL, and Google OAuth. Users sign in with Google, vote once per account, admins manage candidates, and the system provides a live dashboard plus Excel export.
+Open-source voting web application built with Next.js and PostgreSQL.
 
-## Overview
+**Live app:** https://voting.thiraphat.work  
+**Flowchart source:** [docs/SYSTEM_FLOWCHART.md](/home/thiraphat/voting-webapp/docs/SYSTEM_FLOWCHART.md)  
+**License:** [MIT](./LICENSE)
 
-Main application flow:
+## What This Project Is
 
-1. User opens `/login_page`
-2. User clicks `Login with Google`
-3. The app redirects to Google OAuth
-4. After a successful login, the app stores the user in the session
-5. The user selects a candidate and submits a vote
-6. The app checks whether that email has already voted
-7. If not, it stores records in `users` and `votes`
-8. Admins use `/admin` to add candidates, delete candidates, or reset votes
-9. `/dashboard` loads vote totals from `/data`
-10. `/excel` generates an `.xlsx` summary file
+Pulse Vote is a simple, deployable voting system for small events, classrooms, demos, or internal selections.
+It provides local account-based sign-in, one-vote-per-user enforcement, a live results dashboard, Excel export, and an admin panel for managing the ballot and controlling when voting is open.
 
-This repository currently preserves the original voting flow and UI from the reference server, not the later lucky-wheel version.
+This repository is intended to be public, understandable, and easy to extend.
 
-## Features
+## Highlights
 
-- Google sign-in
-- One vote per Google account
-- Admin panel for candidate management
-- Candidate deletion
-- Vote reset from the admin page
-- Live dashboard with Chart.js
-- Excel export of vote totals
+- Local authentication with `iduser + password`
+- Simple account registration with only the required fields
+- One vote per account
+- Admin-only candidate management
+- Admin-controlled voting open/close toggle
+- Vote reset for a fresh round
+- Live result polling on the dashboard
+- Excel export for audit or reporting
+- Dark mode as the default UI
 - Docker-based deployment
-- Reverse-proxy support via `ProxyFix`
+
+## Demo
+
+- Public app: https://voting.thiraphat.work
+- Admin access is granted by listing a registered `iduser` in `ADMIN_IDUSERS`
 
 ## Tech Stack
 
-- Backend: Flask
-- Database: PostgreSQL
-- Authentication: Authlib + Google OAuth 2.0
-- Frontend: HTML + Bootstrap
-- Charting: Chart.js
-- Excel export: OpenPyXL
-- Production server: Gunicorn
-- Containerization: Docker + Docker Compose
+- Next.js 14 App Router
+- React 18
+- PostgreSQL
+- `pg` for database access
+- `xlsx` for export generation
+- Docker Compose for deployment
 
-## Routes
+## Core User Flows
 
-| Route | Method | Description |
-| --- | --- | --- |
-| `/` | `GET`, `POST` | Main voting page and vote submission |
-| `/login_page` | `GET` | Login page |
-| `/login` | `GET` | Start Google OAuth |
-| `/login/google/callback` | `GET` | Google OAuth callback |
-| `/logout` | `GET` | Clear session |
-| `/admin` | `GET`, `POST` | Admin page and candidate creation |
-| `/delete/<id>` | `GET` | Delete candidate |
-| `/reset` | `POST` | Reset users and votes |
-| `/dashboard` | `GET` | Dashboard page |
-| `/data` | `GET` | Vote totals as JSON |
-| `/excel` | `GET` | Download results as Excel |
+### Voter
 
-## Application Flow
+1. Create an account
+2. Sign in with `iduser + password`
+3. Vote once
+4. View live results on the dashboard
+
+### Admin
+
+1. Sign in with an admin account
+2. Add or remove candidates
+3. Open or close voting
+4. Reset votes
+5. Export voting data
+
+## System Flowchart
 
 ```mermaid
 flowchart TD
-    A[Open login page route /login_page] --> B[Click Login with Google]
-    B --> C[Call login route slash login]
-    C --> D[Google OAuth]
-    D --> E[Return to callback route slash login slash google slash callback]
-    E --> F[Store user in session]
-    F --> G[Redirect to home route slash]
-    G --> H{Submit a vote?}
-    H -- No --> I[Show candidate list]
-    H -- Yes --> J[Check users by email]
-    J --> K{Already voted?}
-    K -- Yes --> L[Return You already voted]
-    K -- No --> M[Insert user]
-    M --> N[Insert vote]
-    N --> O[Render main page]
+    A[Visitor opens slash] --> B[Load session from cookie]
+    B --> C[Load candidates]
+    C --> D[Load voting status from app_settings]
+    D --> E{Signed in}
+    E -- No --> F[Render landing page with sign-in CTA]
+    E -- Yes --> G{Voting open}
+    G -- No --> H[Render ballot as closed]
+    G -- Yes --> I{Submit vote}
+    I -- No --> J[Render ballot]
+    I -- Yes --> K[Server action submitVote]
+    K --> L[Check if iduser already exists in users table]
+    L --> M{Already voted}
+    M -- Yes --> N[Redirect with already-voted status]
+    M -- No --> O[Insert user row]
+    O --> P[Insert vote row]
+    P --> Q[Revalidate pages and redirect]
 
-    P[Open admin route slash admin] --> Q{Logged in?}
-    Q -- No --> C
-    Q -- Yes --> R[Check admins table]
-    R --> S{Is admin?}
-    S -- No --> T[Access Denied]
-    S -- Yes --> U[Manage candidates or reset votes]
+    R[User opens slash login] --> S[Authenticate with iduser plus password]
+    S --> T{Valid credentials}
+    T -- No --> U[Return invalid or locked status]
+    T -- Yes --> V[Create session token]
+    V --> W[Set session cookie]
+    W --> X[Redirect to slash]
 
-    V[Open dashboard route slash dashboard] --> W[Request data route slash data]
-    W --> X[Aggregate vote totals]
-    X --> Y[Render chart]
+    Y[User opens slash register] --> Z[Submit name, phone, password]
+    Z --> AA[Create auth_users record with generated iduser]
+    AA --> AB[Redirect to login with generated iduser]
 
-    Z[Open export route slash excel] --> AA[Aggregate vote totals]
-    AA --> AB[Generate xlsx file]
-    AB --> AC[Download file]
+    AC[Admin opens slash admin] --> AD[Require active session]
+    AD --> AE{Admin allowed}
+    AE -- No --> AF[Render access denied]
+    AE -- Yes --> AG[Render admin panel]
+    AG --> AH[Add candidate]
+    AG --> AI[Delete candidate]
+    AG --> AJ[Open or close voting]
+    AG --> AK[Reset votes]
+
+    AL[Dashboard route slash dashboard] --> AM[Client polls slash api slash results]
+    AM --> AN[Aggregate votes by candidate]
+    AN --> AO[Return JSON]
+
+    AP[Export route slash api slash export] --> AQ[Load vote rows]
+    AQ --> AR[Generate XLSX with xlsx package]
+    AR --> AS[Send file download]
 ```
 
-Standalone diagram: [docs/SYSTEM_FLOWCHART.md](/home/thiraphat/voting-webapp/docs/SYSTEM_FLOWCHART.md)
+## Routes
+
+| Route | Purpose |
+| --- | --- |
+| `/` | Voting page |
+| `/login` | Sign in |
+| `/register` | Create account |
+| `/admin` | Admin panel |
+| `/dashboard` | Live results board |
+| `/api/results` | Dashboard JSON endpoint |
+| `/api/export` | Excel export endpoint |
 
 ## Project Structure
 
 ```text
-voting-webapp/
-├── voting_app.py
-├── export.py
-├── schema.sql
-├── requirements.txt
-├── Dockerfile
-├── docker-compose.yml
-├── templates/
-│   ├── home.html
-│   ├── login.html
-│   ├── admin.html
-│   └── dash.html
-├── docs/
-│   └── SYSTEM_FLOWCHART.md
-└── README.md
+app/                 App Router pages, server actions, API routes
+components/          Reusable UI components
+lib/                 Database, auth, and data helpers
+docs/                Project documentation and flowcharts
+public/              Static public assets
+Dockerfile           Production image build
+docker-compose.yml   Container orchestration
 ```
 
-## Database Schema
+## Data Model Notes
 
-Schema file: [schema.sql](/home/thiraphat/voting-webapp/schema.sql)
+The app uses PostgreSQL and separates authentication data from voting data.
 
-Core tables:
+Main tables in use:
 
-- `users`: stores voter email addresses
-- `candidates`: stores candidate names
-- `votes`: stores the user-to-candidate vote relationship
-- `admins`: stores admin email addresses
+- `auth_users`
+- `auth_session_tokens`
+- `auth_login_attempts`
+- `app_settings`
+- `users`
+- `votes`
+- `candidates`
+- `admins`
 
-Rules:
+Notes:
 
-- `users.name` is unique
-- `votes.user_id` is unique
-- one Google account can vote only once
+- Voting state is stored in `app_settings`
+- Voting records remain separate from auth session data
+- Admin access is controlled through `ADMIN_IDUSERS`
+- Only registered accounts whose `iduser` appears in `ADMIN_IDUSERS` can open `/admin`
 
 ## Environment Variables
 
-Create `.env` from [`.env.example`](/home/thiraphat/voting-webapp/.env.example).
+Copy `.env.example` to `.env` and update it for your environment.
 
 ```env
 APP_PORT=8081
 
-DB_HOST=host.docker.internal
+DB_HOST=127.0.0.1
 DB_PORT=5432
 DB_NAME=voting
 DB_USER=postgres
-DB_PASS=change-me
+DB_PASS=your-password
+DB_SSL=false
 
-SECRET_KEY=change-this-secret-key
-
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
+ADMIN_IDUSERS=
 ```
 
-Variable descriptions:
+Example:
 
-- `APP_PORT`: host port exposed by Docker Compose
-- `DB_HOST`: PostgreSQL host
-- `DB_PORT`: PostgreSQL port
-- `DB_NAME`: database name
-- `DB_USER`: database username
-- `DB_PASS`: database password
-- `SECRET_KEY`: Flask session secret
-- `GOOGLE_CLIENT_ID`: Google OAuth client ID
-- `GOOGLE_CLIENT_SECRET`: Google OAuth client secret
-
-## Google OAuth Setup
-
-Configure Google Cloud Console as follows:
-
-1. Open `APIs & Services`
-2. Go to `Credentials`
-3. Create or edit an `OAuth 2.0 Client ID`
-4. Choose `Web application`
-5. Add the correct callback URL
-
-Example callback:
-
-```text
-https://your-domain/login/google/callback
+```env
+ADMIN_IDUSERS=GL0001,GL0002
 ```
 
-Important:
+### Important
 
-The current `/login` route generates the callback using:
-
-```python
-url_for("google_callback", _external=True, _scheme="https")
-```
-
-That means the callback is always generated as `https`. If you deploy behind a reverse proxy or public domain, the Google OAuth configuration must match the final public URL exactly.
+- Do not commit real database credentials to a public repository
+- Use a dedicated database user in production
+- Replace placeholder values in `.env.example` before deployment
 
 ## Local Development
 
-### 1. Create a virtual environment
+### Prerequisites
+
+- Node.js 20+
+- npm
+- PostgreSQL
+
+### Install
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+npm install
 ```
 
-### 2. Install dependencies
+### Run in development
 
 ```bash
-pip install -r requirements.txt
+npm run dev
 ```
 
-### 3. Create the database
+Open: `http://127.0.0.1:8081`
 
-Example:
+### Local scripts
 
 ```bash
-createdb voting
-psql -d voting -f schema.sql
+npm run dev
+npm run dev:local
+npm run start
+npm run start:local
 ```
 
-### 4. Add at least one admin
+These default to port `8081` to avoid collisions with services that may already use `8080`.
 
-Example:
+## Production / Server
 
-```sql
-INSERT INTO admins (email) VALUES ('your-admin@gmail.com');
-```
-
-### 5. Create `.env`
+### Build and run directly
 
 ```bash
-cp .env.example .env
+npm run build
+npm run start:server
 ```
 
-Then fill in the real database and Google OAuth values.
-
-### 6. Run the app
+### Server-oriented scripts
 
 ```bash
-python3 voting_app.py
+npm run dev:server
+npm run start:server
 ```
 
-Default local URL:
-
-```text
-http://127.0.0.1:8080
-```
+These use port `8080` inside the app process.
 
 ## Docker Deployment
 
-Start the app:
+Run:
 
 ```bash
 docker compose up -d --build
 ```
 
-View logs:
-
-```bash
-docker compose logs -f
-```
-
-Stop the app:
-
-```bash
-docker compose down
-```
-
-Notes:
-
-- the container exposes internal port `8080`
-- the external host port is controlled by `APP_PORT`
-- `docker-compose.yml` loads values from `.env`
-- Gunicorn serves `voting_app:app`
-
-## Deployment for `10.33.1.34`
-
-For the current deployment on that machine:
-
-- app path: `~/voting-webapp`
-- runtime: `docker compose`
-- exposed port: `8083`
-
-Example `.env` for that server:
+The container exposes port `8080`, and `docker-compose.yml` maps it externally with:
 
 ```env
-APP_PORT=8083
-DB_HOST=10.33.1.34
-DB_PORT=5432
-DB_NAME=voting
-DB_USER=voting_app
-DB_PASS=your-db-password
-
-SECRET_KEY=your-secret-key
-
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
+APP_PORT
 ```
-
-Deployment steps:
-
-```bash
-cd ~/voting-webapp
-docker compose up -d --build
-```
-
-Basic checks:
-
-```bash
-docker ps
-curl -I http://127.0.0.1:8083/login_page
-```
-
-LAN URL:
-
-```text
-http://10.33.1.34:8083
-```
-
-If Google login is required on that server, verify that the callback URL in Google Cloud matches the real public URL exactly.
-
-## Admin Usage
-
-A user can access `/admin` only if the email already exists in the `admins` table.
 
 Example:
 
-```sql
-INSERT INTO admins (email) VALUES ('your-admin@gmail.com');
+- internal container port: `8080`
+- external host port: `8083`
+- resulting public URL example: `http://host:8083`
+
+## Validation
+
+Typical verification steps used during development:
+
+```bash
+npm run build
 ```
 
-The admin page can:
+If you add ESLint configuration later, you can also run:
 
-- add candidates
-- delete candidates
-- reset `users` and `votes`
-
-## `/data` Response Format
-
-Example response:
-
-```json
-{
-  "labels": ["Alice", "Bob"],
-  "votes": [3, 5]
-}
+```bash
+npm run lint
 ```
-
-## Excel Export
-
-The `/excel` route generates an `.xlsx` file containing:
-
-- candidate name
-- vote total
-
-## Reverse Proxy and HTTPS
-
-The application uses:
-
-```python
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
-```
-
-If you deploy behind Nginx, Traefik, Cloudflare, or another reverse proxy:
-
-- forward `X-Forwarded-Proto`
-- forward `Host`
-- make sure the public URL matches the Google OAuth callback URL
-
-## Current Limitations
-
-- uses a global database connection and cursor
-- `/delete/<id>` still uses `GET`
-- OAuth callback generation is fixed to `https`
-- there is no `/health` route
-- the code intentionally stays close to the original reference implementation and is not yet refactored for heavier production workloads
-
-## Common Issues
-
-### `redirect_uri_mismatch`
-
-Cause:
-
-- the callback URL in Google Cloud Console does not match the URL generated by the application
-
-Fix:
-
-- add the exact callback URL used by the deployed app
-
-### `Access Denied` on `/admin`
-
-Cause:
-
-- the logged-in Google email is not in the `admins` table
-
-Fix:
-
-- insert the email into `admins`
-
-### `You already voted`
-
-Cause:
-
-- that Google account already has a vote
-
-Fix:
-
-- this is expected behavior
-- for testing, reset votes from `/admin`
-
-### PostgreSQL connection failure
-
-Check:
-
-- `DB_HOST`
-- `DB_PORT`
-- `DB_NAME`
-- `DB_USER`
-- `DB_PASS`
-- firewall rules
-- PostgreSQL listen address
 
 ## Security Notes
 
-- never commit `.env`
-- rotate secrets immediately if they were exposed
-- use a strong `SECRET_KEY`
-- allow only trusted Google accounts in `admins`
-- use HTTPS for real deployments
+- Do not hardcode admin credentials in source code
+- Grant admin access only through `ADMIN_IDUSERS`
+- For a real deployment, rotate admin credentials and restrict database access
+- Keep `.env` private
+- Serve the public app behind HTTPS
+
+## Roadmap Ideas
+
+- Role management from the admin UI
+- Audit log for admin actions
+- Better rate limiting and abuse controls
+- Optional email or SMS verification
+- Better theming and branding customization
+
+## Contributing
+
+Issues, improvements, and pull requests are welcome.
+
+If you want to extend the project, a good place to start is:
+
+- authentication hardening
+- admin UX
+- export formats
+- deployment automation
+- database migrations
 
 ## License
 
-This repository does not currently include a license file. Add one if the project will be shared publicly.
+This project is released under the MIT License.
+See [LICENSE](./LICENSE).

@@ -4,51 +4,61 @@ This document summarizes the current runtime flow of the voting application.
 
 ```mermaid
 flowchart TD
-    A[User opens login page route slash login_page] --> B[Click Login with Google]
-    B --> C[Flask login route slash login]
-    C --> D[Redirect to Google OAuth]
-    D --> E[User authenticates with Google]
-    E --> F[Flask callback route slash login slash google slash callback]
-    F --> G[Google userinfo API]
-    G --> H[Store user profile in Flask session]
-    H --> I[Redirect to home page]
+    A[Visitor opens slash] --> B[Load session from cookie]
+    B --> C[Load candidates]
+    C --> D[Load voting status from app_settings]
+    D --> E{Signed in}
+    E -- No --> F[Render landing page with sign-in CTA]
+    E -- Yes --> G{Voting open}
+    G -- No --> H[Render ballot as closed]
+    G -- Yes --> I{Submit vote}
+    I -- No --> J[Render ballot]
+    I -- Yes --> K[Server action submitVote]
+    K --> L[Check if iduser already exists in users table]
+    L --> M{Already voted}
+    M -- Yes --> N[Redirect with already-voted status]
+    M -- No --> O[Insert user row]
+    O --> P[Insert vote row]
+    P --> Q[Revalidate pages and redirect]
 
-    I --> J[Load candidates from PostgreSQL]
-    J --> K{User submits a vote}
-    K -- No --> L[Render home page]
-    K -- Yes --> M[Check voter email in users table]
-    M --> N{Email already exists}
-    N -- Yes --> O[Return You already voted]
-    N -- No --> P[Insert user]
-    P --> Q[Insert vote]
-    Q --> R[Render response]
+    R[User opens slash login] --> S[Authenticate with iduser plus password]
+    S --> T{Valid credentials}
+    T -- No --> U[Return invalid or locked status]
+    T -- Yes --> V[Create session token]
+    V --> W[Set session cookie]
+    W --> X[Redirect to slash]
 
-    S[Admin accesses route slash admin] --> T{Session exists}
-    T -- No --> C
-    T -- Yes --> U[Check email in admins table]
-    U --> V{Authorized admin}
-    V -- No --> W[Return Access Denied]
-    V -- Yes --> X[Manage candidates or reset votes]
+    Y[User opens slash register] --> Z[Submit name, phone, password]
+    Z --> AA[Create auth_users record with generated iduser]
+    AA --> AB[Redirect to login with generated iduser]
 
-    Y[Dashboard page route slash dashboard] --> Z[Request data route slash data]
-    Z --> AA[Aggregate votes by candidate]
-    AA --> AB[Return JSON]
+    AC[Admin opens slash admin] --> AD[Require active session]
+    AD --> AE{Admin allowed}
+    AE -- No --> AF[Render access denied]
+    AE -- Yes --> AG[Render admin panel]
+    AG --> AH[Add candidate]
+    AG --> AI[Delete candidate]
+    AG --> AJ[Open or close voting]
+    AG --> AK[Reset votes]
 
-    AC[Excel export route slash excel] --> AD[Aggregate votes]
-    AD --> AE[Generate XLSX with OpenPyXL]
-    AE --> AF[Send file download]
+    AL[Dashboard route slash dashboard] --> AM[Client polls slash api slash results]
+    AM --> AN[Aggregate votes by candidate]
+    AN --> AO[Return JSON]
+
+    AP[Export route slash api slash export] --> AQ[Load vote rows]
+    AQ --> AR[Generate XLSX with xlsx package]
+    AR --> AS[Send file download]
 ```
 
 ## Main Components
 
-- Browser client
-- Flask application
-- Google OAuth provider
+- Next.js App Router pages, route handlers, and server actions
 - PostgreSQL database
-- Optional reverse proxy such as Nginx or Cloudflare
+- Local session-cookie authentication
+- Docker-based deployment
 
 ## Notes
 
-- The app trusts forwarded host and protocol headers through `ProxyFix`.
-- Google OAuth depends on valid `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
-- The production callback URL must match the value configured in Google Cloud Console.
+- Authentication data is stored separately from vote data.
+- Voting availability is controlled through the `app_settings` table.
+- Admin access is controlled through the `ADMIN_IDUSERS` environment variable.

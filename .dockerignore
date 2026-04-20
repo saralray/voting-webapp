@@ -1,12 +1,10 @@
 .git
 .gitignore
 .codex
-__pycache__
-*.pyc
-*.pyo
-*.pyd
 .env
 .env.*
+node_modules
+.next
 .venv
 *.pem
 *.key
