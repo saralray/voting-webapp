@@ -26,11 +26,6 @@ This repository is intended to be public, understandable, and easy to extend.
 - Dark mode as the default UI
 - Docker-based deployment
 
-## Demo
-
-- Public app: https://voting.thiraphat.work
-- Admin access is granted by listing a registered `iduser` in `ADMIN_IDUSERS`
-
 ## Tech Stack
 
 - Next.js 14 App Router
