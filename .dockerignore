@@ -1,0 +1,17 @@
+.git
+.gitignore
+.codex
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env
+.env.*
+.venv
+*.pem
+*.key
+*.crt
+*.p12
+results.xlsx
+votes.xlsx
+voting_results.xlsx

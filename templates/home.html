@@ -1,599 +1,92 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lucky Wheel</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
 <style>
-:root{
---bg:#f7f1e3;
---ink:#112a46;
---accent:#ff6b35;
---accent-2:#ffd166;
---card:#fff8ee;
---stroke:#17324d;
-}
-
-*{
-box-sizing:border-box;
-}
-
 body{
-margin:0;
+background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
 min-height:100vh;
-font-family:"Space Grotesk",sans-serif;
-color:var(--ink);
-background:
-radial-gradient(circle at top left, rgba(255,209,102,0.55), transparent 28%),
-radial-gradient(circle at bottom right, rgba(17,42,70,0.18), transparent 30%),
-linear-gradient(135deg, #fdf6e7 0%, #f3ead8 45%, #efe3ca 100%);
-}
-
-.shell{
-max-width:1180px;
-margin:0 auto;
-padding:40px 20px 28px;
-}
-
-.hero{
-display:grid;
-grid-template-columns:1.1fr 0.9fr;
-gap:28px;
-align-items:start;
-}
-
-.panel{
-background:rgba(255,248,238,0.92);
-border:2px solid rgba(23,50,77,0.14);
-border-radius:28px;
-box-shadow:0 24px 70px rgba(17,42,70,0.12);
-backdrop-filter:blur(10px);
-}
-
-.intro{
-padding:34px;
-}
-
-.eyebrow{
-display:inline-flex;
-align-items:center;
-gap:10px;
-padding:8px 14px;
-border-radius:999px;
-background:#fff;
-border:1px solid rgba(23,50,77,0.12);
-font-size:14px;
-font-weight:700;
-letter-spacing:0.04em;
-text-transform:uppercase;
-}
-
-h1{
-font-size:clamp(2.5rem,5vw,4.8rem);
-line-height:0.95;
-margin:18px 0 16px;
-font-weight:700;
-}
-
-.user-card{
-margin-top:26px;
-padding:18px;
 display:flex;
 align-items:center;
-justify-content:space-between;
-gap:14px;
-background:#fff;
-border-radius:22px;
-border:1px solid rgba(23,50,77,0.12);
-}
-
-.user-meta{
-display:flex;
-align-items:center;
-gap:14px;
-min-width:0;
-}
-
-.avatar{
-width:56px;
-height:56px;
-border-radius:50%;
-object-fit:cover;
-border:3px solid rgba(255,107,53,0.18);
-}
-
-.user-text{
-min-width:0;
-}
-
-.user-name{
-font-size:1rem;
-font-weight:700;
-white-space:nowrap;
-overflow:hidden;
-text-overflow:ellipsis;
-}
-
-.user-email{
-font-size:0.92rem;
-color:rgba(17,42,70,0.68);
-white-space:nowrap;
-overflow:hidden;
-text-overflow:ellipsis;
-}
-
-.wheel-panel{
-padding:28px 28px 22px;
-display:flex;
-flex-direction:column;
-align-items:center;
-position:relative;
-overflow:hidden;
-}
-
-.wheel-panel::before{
-content:"";
-position:absolute;
-inset:auto -20% -40% auto;
-width:240px;
-height:240px;
-background:radial-gradient(circle, rgba(255,107,53,0.18), transparent 70%);
-pointer-events:none;
-}
-
-.wheel-head{
-width:100%;
-display:flex;
-justify-content:space-between;
-align-items:flex-start;
-gap:12px;
-margin-bottom:16px;
-}
-
-.wheel-head h2{
-margin:0;
-font-size:1.4rem;
-font-weight:700;
-}
-
-.wheel-head p{
-margin:6px 0 0;
-font-size:0.95rem;
-color:rgba(17,42,70,0.68);
-}
-
-.wheel-wrap{
-position:relative;
-width:min(100%, 520px);
-aspect-ratio:1;
-display:grid;
-place-items:center;
-}
-
-.pointer{
-position:absolute;
-top:6px;
-left:50%;
-transform:translateX(-50%);
-width:0;
-height:0;
-border-left:22px solid transparent;
-border-right:22px solid transparent;
-border-top:36px solid var(--accent);
-z-index:5;
-filter:drop-shadow(0 10px 10px rgba(17,42,70,0.15));
-}
-
-.wheel-shadow{
-position:absolute;
-inset:9% 9% 9% 9%;
-border-radius:50%;
-background:radial-gradient(circle, rgba(17,42,70,0.1), transparent 60%);
-}
-
-#wheel{
-width:100%;
-height:100%;
-max-width:520px;
-max-height:520px;
-border-radius:50%;
-transition:transform 5.8s cubic-bezier(0.12, 0.85, 0.18, 1);
-transform:rotate(0deg);
-border:14px solid #fff;
-box-shadow:
-0 30px 60px rgba(17,42,70,0.18),
-inset 0 0 0 8px rgba(17,42,70,0.08);
-background:#f8f1dd;
-}
-
-.hub{
-position:absolute;
-width:92px;
-height:92px;
-border-radius:50%;
-display:grid;
-place-items:center;
-background:linear-gradient(180deg, var(--accent-2), #ffb703);
-border:10px solid #fff;
-box-shadow:0 12px 22px rgba(17,42,70,0.18);
-font-size:0.9rem;
-font-weight:700;
-text-transform:uppercase;
-letter-spacing:0.08em;
-}
-
-.controls{
-width:min(100%, 520px);
-margin-top:18px;
-display:grid;
-gap:14px;
-}
-
-.spin-btn{
-border:none;
-border-radius:18px;
-padding:16px 20px;
-font-size:1rem;
-font-weight:700;
-color:#fff;
-background:linear-gradient(135deg, var(--accent), #e5531d);
-box-shadow:0 16px 32px rgba(255,107,53,0.28);
-}
-
-.spin-btn:disabled{
-opacity:0.65;
-cursor:not-allowed;
-box-shadow:none;
-}
-
-.status-card,
-.result-card,
-.list-card{
-padding:18px 20px;
-border-radius:20px;
-background:#fff;
-border:1px solid rgba(23,50,77,0.1);
-}
-
-.status-card{
-display:flex;
-justify-content:space-between;
-align-items:center;
-gap:16px;
-}
-
-.status-label{
-font-size:0.82rem;
-letter-spacing:0.08em;
-text-transform:uppercase;
-font-weight:700;
-color:rgba(17,42,70,0.58);
-}
-
-.status-value{
-margin-top:4px;
-font-size:1.06rem;
-font-weight:700;
-}
-
-.result-badge{
-display:inline-flex;
-align-items:center;
-gap:8px;
-padding:7px 12px;
-border-radius:999px;
-background:rgba(255,107,53,0.14);
-font-weight:700;
-color:#b23f15;
-}
-
-.result-name{
-font-size:2rem;
-font-weight:700;
-line-height:1.05;
-margin:10px 0 8px;
-}
-
-.result-note{
-margin:0;
-color:rgba(17,42,70,0.72);
-}
-
-.list-card ul{
-margin:14px 0 0;
-padding:0;
-list-style:none;
-display:grid;
-gap:10px;
-}
-
-.list-card li{
-display:flex;
-justify-content:space-between;
-gap:14px;
-padding:12px 14px;
-border-radius:16px;
-background:#fff8ee;
-border:1px solid rgba(23,50,77,0.08);
-font-weight:500;
-}
-
-.ghost-btn{
-display:inline-flex;
 justify-content:center;
-align-items:center;
-padding:12px 16px;
-border-radius:16px;
-text-decoration:none;
-border:1px solid rgba(17,42,70,0.14);
-background:#fff;
-color:var(--ink);
-font-weight:700;
+color:white;
 }
 
-@media (max-width: 992px){
-.hero{
-grid-template-columns:1fr;
-}
-
-.intro,
-.wheel-panel{
-padding:22px;
-}
-}
-
-@media (max-width: 576px){
-.shell{
-padding:20px 14px 24px;
-}
-
-h1{
-font-size:2.5rem;
-}
-
-.user-card,
-.status-card{
-flex-direction:column;
-align-items:flex-start;
-}
-
-.wheel-head{
-flex-direction:column;
-}
+.card{
+background:rgba(255,255,255,0.08);
+border-radius:20px;
+padding:25px;
 }
 </style>
+
 </head>
+
 <body>
-<div class="shell">
-  <div class="hero">
-    <section class="panel intro">
-      <div class="eyebrow">Login Protected Experience</div>
-      <h1>Lucky Wheel</h1>
 
-      <div class="user-card">
-        <div class="user-meta">
-          <img class="avatar" src="{{ session.user.picture }}" alt="{{ session.user.name }}">
-          <div class="user-text">
-            <div class="user-name">{{ session.user.name }}</div>
-            <div class="user-email">{{ session.user.email }}</div>
-          </div>
-        </div>
-        <a href="/logout" class="ghost-btn">Logout</a>
-      </div>
+<div class="container">
+<div class="row justify-content-center">
+<div class="col-lg-5">
 
-    </section>
+<div class="card">
 
-    <section class="panel wheel-panel">
-      <div class="wheel-head">
-        <div>
-          <h2>Lucky Wheel</h2>
-          <p>{{ wheel_count }} choices are loaded into the wheel.</p>
-        </div>
-        {% if existing_vote %}
-        <div class="result-badge">Completed</div>
-        {% else %}
-        <div class="result-badge">1 spin per account</div>
-        {% endif %}
-      </div>
+<h3 class="text-center mb-4">🗳 Voting System</h3>
 
-      <div class="wheel-wrap">
-        <div class="pointer"></div>
-        <div class="wheel-shadow"></div>
-        <canvas id="wheel" width="520" height="520"></canvas>
-        <div class="hub">Spin</div>
-      </div>
+<!-- ✅ ถ้ายังไม่ login -->
+{% if not session.user %}
 
-      <div class="controls">
-        <button id="spinButton" class="spin-btn" {% if existing_vote or not candidates %}disabled{% endif %}>
-          {% if not candidates %}
-          Wheel not ready
-          {% elif existing_vote %}
-          Spin already used
-          {% else %}
-          Spin the Wheel
-          {% endif %}
-        </button>
+<div class="text-center">
 
-        <div class="status-card">
-          <div>
-            <div class="status-label">Current Status</div>
-            <div id="statusText" class="status-value">
-              {% if not candidates %}
-              No wheel items have been configured yet.
-              {% elif existing_vote %}
-              Your spin has already been recorded.
-              {% else %}
-              Ready for your single spin.
-              {% endif %}
-            </div>
-          </div>
-          <div class="result-badge" id="statusBadge">
-            {% if existing_vote %}Locked{% else %}Ready{% endif %}
-          </div>
-        </div>
+<p class="mb-3">🔐 Please login to vote</p>
 
-        <div class="result-card" id="resultCard">
-          <div class="status-label">Your Result</div>
-          <div class="result-name" id="resultName">
-            {% if existing_vote %}{{ existing_vote[1] }}{% else %}Waiting for your spin{% endif %}
-          </div>
-          <p class="result-note" id="resultNote">
-            {% if existing_vote %}
-            This result is already stored for your account.
-            {% else %}
-            The server chooses and stores the final result when the wheel stops.
-            {% endif %}
-          </p>
-        </div>
+<a href="/login" class="btn btn-danger w-100 mb-3">
+Login with Google
+</a>
 
-        <div class="status-card">
-          <div>
-            <div class="status-label">Wheel Coverage</div>
-            <div class="status-value">{{ wheel_count }} live segments</div>
-          </div>
-          <div class="result-badge">Protected by login</div>
-        </div>
-
-        <div class="list-card">
-          <div class="status-label">Wheel Items</div>
-          <ul>
-            {% for candidate in candidates %}
-            <li><span>{{ loop.index }}.</span><span>{{ candidate[1] }}</span></li>
-            {% endfor %}
-          </ul>
-        </div>
-      </div>
-    </section>
-  </div>
 </div>
 
-<script>
-const wheelCanvas = document.getElementById("wheel");
-const spinButton = document.getElementById("spinButton");
-const statusText = document.getElementById("statusText");
-const statusBadge = document.getElementById("statusBadge");
-const resultName = document.getElementById("resultName");
-const resultNote = document.getElementById("resultNote");
-const candidates = {{ candidates|tojson }};
-const csrfToken = {{ csrf_token|tojson }};
+{% else %}
 
-let currentRotation = 0;
-let isSpinning = false;
+<!-- ✅ แสดง user -->
+<div class="text-end mb-3">
+  👋 {{session.user.name}}
+  <img src="{{session.user.picture}}" width="35" class="rounded-circle">
+  <a href="/logout" class="btn btn-sm btn-danger">Logout</a>
+</div>
 
-function drawWheel() {
-  if (!wheelCanvas || !candidates.length) {
-    return;
-  }
+<!-- ✅ ฟอร์มโหวต -->
+<form method="POST">
 
-  const ctx = wheelCanvas.getContext("2d");
-  const radius = wheelCanvas.width / 2;
-  const colors = [
-    "#f25f5c", "#247ba0", "#70c1b3", "#ffbf69",
-    "#8d99ae", "#ef476f", "#06d6a0", "#ffd166"
-  ];
+<input class="form-control mb-3" name="name" value="{{session.user.name}}" readonly>
 
-  ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
-  ctx.save();
-  ctx.translate(radius, radius);
+{% for c in candidates %}
+<div class="form-check mb-2">
+<input class="form-check-input" type="radio" name="candidate" value="{{c[0]}}" required>
+<label class="form-check-label">{{c[1]}}</label>
+</div>
+{% endfor %}
 
-  const sliceAngle = (Math.PI * 2) / candidates.length;
+<button class="btn btn-primary w-100 mt-3">Submit Vote</button>
 
-  candidates.forEach((candidate, index) => {
-    const start = index * sliceAngle - Math.PI / 2;
-    const end = start + sliceAngle;
+</form>
 
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.arc(0, 0, radius - 18, start, end);
-    ctx.closePath();
-    ctx.fillStyle = colors[index % colors.length];
-    ctx.fill();
+{% endif %}
 
-    ctx.save();
-    ctx.rotate(start + sliceAngle / 2);
-    ctx.textAlign = "right";
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "700 22px Space Grotesk";
-    ctx.fillText(candidate[1], radius - 46, 8);
-    ctx.restore();
-  });
+<hr>
 
-  ctx.beginPath();
-  ctx.arc(0, 0, radius - 18, 0, Math.PI * 2);
-  ctx.lineWidth = 8;
-  ctx.strokeStyle = "rgba(255,255,255,0.95)";
-  ctx.stroke();
-  ctx.restore();
-}
+<div class="d-grid gap-2">
+<a href="/dashboard" class="btn btn-success">📊 Dashboard</a>
+<a href="/admin" class="btn btn-warning">⚙ Admin Panel</a>
+</div>
 
-function getRotationForWinner(winnerIndex, totalSegments) {
-  const degreesPerSegment = 360 / totalSegments;
-  const winnerCenter = (winnerIndex * degreesPerSegment) + (degreesPerSegment / 2);
-  const targetAtPointer = 360 - winnerCenter;
-  return currentRotation + (360 * 6) + targetAtPointer;
-}
+</div>
 
-async function spinWheel() {
-  if (isSpinning || !candidates.length) {
-    return;
-  }
+</div>
+</div>
+</div>
 
-  isSpinning = true;
-  spinButton.disabled = true;
-  statusText.textContent = "Talking to the server and locking your spin...";
-  statusBadge.textContent = "Processing";
-
-  try {
-    const response = await fetch("/spin", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-Token": csrfToken
-      }
-    });
-
-    const payload = await response.json();
-
-    if (!response.ok) {
-      throw new Error(payload.error || "Unable to complete the spin");
-    }
-
-    const targetRotation = getRotationForWinner(payload.winner_index, payload.total_segments);
-    currentRotation = targetRotation % 360;
-    wheelCanvas.style.transform = `rotate(${targetRotation}deg)`;
-
-    statusText.textContent = "Wheel spinning...";
-    statusBadge.textContent = "Spinning";
-
-    window.setTimeout(() => {
-      resultName.textContent = payload.candidate_name;
-      resultNote.textContent = "Your result has been saved and cannot be changed.";
-      statusText.textContent = "Spin completed successfully.";
-      statusBadge.textContent = "Complete";
-      spinButton.textContent = "Spin already used";
-      isSpinning = false;
-    }, 5800);
-  } catch (error) {
-    statusText.textContent = error.message;
-    statusBadge.textContent = "Error";
-    if (error.message.includes("already")) {
-      spinButton.textContent = "Spin already used";
-      spinButton.disabled = true;
-    } else {
-      spinButton.disabled = false;
-    }
-    isSpinning = false;
-  }
-}
-
-drawWheel();
-if (spinButton) {
-  spinButton.addEventListener("click", spinWheel);
-}
-</script>
 </body>
 </html>

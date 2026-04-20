@@ -60,16 +60,6 @@ box-shadow:0 5px 15px rgba(0,0,0,0.2);
 
 <p class="text-muted mb-4">Sign in to continue voting</p>
 
-{% if error == "session" %}
-<div class="alert alert-warning text-start">
-Your login session expired during Google sign-in. Please try again.
-</div>
-{% elif error == "google" %}
-<div class="alert alert-danger text-start">
-Google sign-in could not be completed. Please try again.
-</div>
-{% endif %}
-
 <a href="/login" class="google-btn w-100">
 
 <img src="https://www.svgrepo.com/show/475656/google-color.svg" width="20">

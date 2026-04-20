@@ -1,318 +1,427 @@
 # Voting Web Application
 
-Web voting system built with Flask and PostgreSQL. The application supports Google OAuth login, candidate management for admins, a live results dashboard, and Excel export.
+ระบบโหวตออนไลน์ด้วย Flask + PostgreSQL + Google OAuth ผู้ใช้ล็อกอินด้วย Google แล้วโหวตได้ 1 ครั้งต่อ 1 บัญชี แอดมินจัดการรายชื่อผู้สมัครได้ ดูผลรวมผ่านหน้า dashboard และดาวน์โหลดผลเป็น Excel ได้
 
-## Overview
+## ภาพรวมระบบ
 
-This project is a simple online voting platform with three main user flows:
+ลำดับการทำงานหลักของระบบ:
 
-- Voters sign in with Google and submit one vote.
-- Admins manage candidate records from the admin page.
-- Anyone with access to the dashboard can view live vote totals.
+1. ผู้ใช้เข้า `/login_page`
+2. กด `Login with Google`
+3. ระบบ redirect ไป Google OAuth
+4. เมื่อล็อกอินสำเร็จ ระบบเก็บข้อมูลผู้ใช้ใน session
+5. ผู้ใช้เลือก candidate และ submit vote
+6. ระบบตรวจจากอีเมลว่าเคยโหวตแล้วหรือยัง
+7. ถ้ายังไม่เคย ระบบจะบันทึก `users` และ `votes`
+8. แอดมินเข้า `/admin` เพื่อเพิ่ม ลบ candidate หรือ reset votes
+9. หน้า `/dashboard` ดึงข้อมูลจาก `/data` มาแสดงผลกราฟ
+10. หน้า `/excel` สร้างไฟล์สรุปผล `.xlsx`
 
-The application is designed to run behind a reverse proxy such as Nginx or Cloudflare and uses PostgreSQL as its persistent data store.
+เวอร์ชันใน repo นี้เป็นเวอร์ชันหน้าตาและ flow แบบเดียวกับต้นฉบับบนเซิร์ฟเวอร์อ้างอิง ไม่ใช่เวอร์ชัน lucky wheel
 
-## Features
+## ฟีเจอร์
 
-- Google OAuth login with Authlib
-- One vote per Google account
-- Admin panel for candidate management
-- Live dashboard backed by JSON data
-- Excel export of voting results
-- PostgreSQL database
-- Reverse-proxy support via `ProxyFix`
-- Docker-based deployment
+- ล็อกอินด้วย Google
+- จำกัด 1 บัญชี Google ต่อ 1 โหวต
+- แอดมินเพิ่ม candidate ได้
+- แอดมินลบ candidate ได้
+- แอดมิน reset ผู้ใช้และผลโหวตได้
+- Dashboard แสดงกราฟผลโหวตแบบสด
+- Export ผลโหวตเป็น Excel
+- รองรับการรันผ่าน Docker
+- รองรับ reverse proxy ด้วย `ProxyFix`
 
 ## Tech Stack
 
 - Backend: Flask
-- Authentication: Google OAuth 2.0 via Authlib
 - Database: PostgreSQL
-- Frontend templates: HTML + Bootstrap
-- Charts: Chart.js
-- Export: OpenPyXL
-- Runtime: Gunicorn
-- Containerization: Docker and Docker Compose
+- Auth: Authlib + Google OAuth 2.0
+- Frontend: HTML + Bootstrap
+- Chart: Chart.js
+- Excel Export: OpenPyXL
+- Production Server: Gunicorn
+- Container: Docker + Docker Compose
 
-## System Architecture
+## Route ทั้งหมด
 
-- Client browser accesses the Flask application through a reverse proxy or public HTTPS domain.
-- Flask handles page rendering, session management, OAuth redirects, and database writes/reads.
-- Google OAuth validates the user identity and returns profile information.
-- PostgreSQL stores admins, candidates, voters, and votes.
-- The dashboard and Excel export read aggregate vote totals from PostgreSQL.
+| Route | Method | รายละเอียด |
+| --- | --- | --- |
+| `/` | `GET`, `POST` | หน้าโหวตหลักและส่งผลโหวต |
+| `/login_page` | `GET` | หน้า login |
+| `/login` | `GET` | เริ่ม Google OAuth |
+| `/login/google/callback` | `GET` | callback จาก Google |
+| `/logout` | `GET` | ล้าง session |
+| `/admin` | `GET`, `POST` | หน้า admin และเพิ่ม candidate |
+| `/delete/<id>` | `GET` | ลบ candidate |
+| `/reset` | `POST` | reset ตาราง users และ votes |
+| `/dashboard` | `GET` | หน้าแสดงผลกราฟ |
+| `/data` | `GET` | ส่งข้อมูลผลโหวตเป็น JSON |
+| `/excel` | `GET` | ดาวน์โหลดผลเป็นไฟล์ Excel |
 
-## System Flowchart
-
-The main application flow is shown below. GitHub renders Mermaid diagrams directly in Markdown.
+## Flow การทำงาน
 
 ```mermaid
 flowchart TD
-    A[User opens /login_page] --> B[Click Login with Google]
-    B --> C[/login route/]
-    C --> D[Redirect to Google OAuth]
-    D --> E[Google authenticates user]
-    E --> F[/login/google/callback/]
-    F --> G[Fetch user profile from Google]
-    G --> H[Store user in Flask session]
-    H --> I[Redirect to /]
-    I --> J{User submits vote?}
-    J -- No --> K[Show candidate list]
-    J -- Yes --> L[Check voter email in users table]
-    L --> M{Already voted?}
-    M -- Yes --> N[Return You already voted]
-    M -- No --> O[Insert user record]
-    O --> P[Insert vote record]
-    P --> Q[Return updated home page]
+    A[เปิด /login_page] --> B[กด Login with Google]
+    B --> C[/login]
+    C --> D[Google OAuth]
+    D --> E[/login/google/callback]
+    E --> F[เก็บ user ลง session]
+    F --> G[/]
+    G --> H{ส่งโหวตไหม}
+    H -- ไม่ --> I[แสดงรายชื่อ candidate]
+    H -- ใช่ --> J[เช็ก users จาก email]
+    J --> K{เคยโหวตแล้วหรือยัง}
+    K -- ใช่ --> L[คืนข้อความ You already voted]
+    K -- ยัง --> M[เพิ่ม user]
+    M --> N[เพิ่ม vote]
+    N --> O[แสดงหน้าหลัก]
 
-    R[Admin opens /admin] --> S{Logged in?}
-    S -- No --> C
-    S -- Yes --> T[Check email in admins table]
-    T --> U{Is admin?}
-    U -- No --> V[Return Access Denied]
-    U -- Yes --> W[Manage candidates or reset votes]
+    P[/admin] --> Q{ล็อกอินหรือยัง}
+    Q -- ไม่ --> C
+    Q -- ใช่ --> R[เช็กในตาราง admins]
+    R --> S{เป็น admin หรือไม่}
+    S -- ไม่ --> T[Access Denied]
+    S -- ใช่ --> U[จัดการ candidate หรือ reset votes]
 
-    X[Dashboard opens /dashboard] --> Y[/data route/]
-    Y --> Z[Aggregate votes by candidate]
-    Z --> AA[Return JSON for chart]
+    V[/dashboard] --> W[/data]
+    W --> X[aggregate ผลโหวต]
+    X --> Y[render chart]
 
-    AB[Export opens /excel] --> AC[Aggregate votes]
-    AC --> AD[Generate XLSX file]
-    AD --> AE[Download results.xlsx]
+    Z[/excel] --> AA[aggregate ผลโหวต]
+    AA --> AB[สร้างไฟล์ xlsx]
+    AB --> AC[ดาวน์โหลด]
 ```
 
-For a standalone version, see [docs/SYSTEM_FLOWCHART.md](/home/thiraphat/voting-webapp/docs/SYSTEM_FLOWCHART.md).
+ไฟล์ diagram แยก: [docs/SYSTEM_FLOWCHART.md](/home/thiraphat/voting-webapp/docs/SYSTEM_FLOWCHART.md)
 
-## Route Summary
+## โครงสร้างโปรเจกต์
 
-| Route | Method | Description |
-| --- | --- | --- |
-| `/` | `GET`, `POST` | Main voting page and vote submission |
-| `/login_page` | `GET` | Login screen |
-| `/login` | `GET` | Starts Google OAuth flow |
-| `/login/google/callback` | `GET` | Google OAuth callback |
-| `/logout` | `GET` | Clears session |
-| `/admin` | `GET`, `POST` | Admin page and candidate creation |
-| `/delete/<id>` | `GET` | Deletes a candidate |
-| `/reset` | `POST` | Resets vote and user tables |
-| `/dashboard` | `GET` | Dashboard page |
-| `/data` | `GET` | JSON endpoint for vote totals |
-| `/excel` | `GET` | Downloads vote totals as Excel |
+```text
+voting-webapp/
+├── voting_app.py
+├── export.py
+├── schema.sql
+├── requirements.txt
+├── Dockerfile
+├── docker-compose.yml
+├── templates/
+│   ├── home.html
+│   ├── login.html
+│   ├── admin.html
+│   └── dash.html
+├── docs/
+│   └── SYSTEM_FLOWCHART.md
+└── README.md
+```
 
-## Database Schema
+## โครงสร้างฐานข้อมูล
 
-The core schema is defined in [schema.sql](/home/thiraphat/voting-webapp/schema.sql).
+ไฟล์ schema: [schema.sql](/home/thiraphat/voting-webapp/schema.sql)
 
-### Tables
+ตารางหลัก:
 
-- `users`: stores each voter email once
-- `candidates`: stores candidate names
-- `votes`: links one user to one candidate
-- `admins`: stores admin email addresses
+- `users` เก็บอีเมลผู้โหวต
+- `candidates` เก็บรายชื่อผู้สมัคร
+- `votes` เก็บความสัมพันธ์ระหว่างผู้ใช้กับ candidate
+- `admins` เก็บอีเมลของแอดมิน
 
-### Vote Integrity
+กติกา:
 
-- The `users.name` column is unique.
-- The `votes.user_id` column is unique.
-- The application checks whether the voter email already exists before inserting a new vote.
+- `users.name` เป็น unique
+- `votes.user_id` เป็น unique
+- 1 บัญชี Google โหวตได้ 1 ครั้ง
 
 ## Environment Variables
 
-Create a `.env` file based on [.env.example](/home/thiraphat/voting-webapp/.env.example).
+ให้สร้าง `.env` จาก [`.env.example`](/home/thiraphat/voting-webapp/.env.example)
 
 ```env
-APP_PORT=8080
+APP_PORT=8081
 
-DB_HOST=your_database_host
+DB_HOST=host.docker.internal
 DB_PORT=5432
-DB_NAME=your_database_name
-DB_USER=your_database_user
-DB_PASS=your_database_password
+DB_NAME=voting
+DB_USER=postgres
+DB_PASS=change-me
 
-SECRET_KEY=your_secret_key
+SECRET_KEY=change-this-secret-key
 
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-
-SESSION_COOKIE_SECURE=true
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
 ```
 
-### Variable Notes
+ความหมายของตัวแปร:
 
-- `APP_PORT`: host port mapped to the container
-- `DB_HOST`: PostgreSQL host reachable from the app container
-- `DB_PORT`: PostgreSQL port, usually `5432`
-- `DB_NAME`: database name
-- `DB_USER`: database username
-- `DB_PASS`: database password
-- `SECRET_KEY`: Flask session secret
-- `GOOGLE_CLIENT_ID`: OAuth client ID from Google Cloud Console
-- `GOOGLE_CLIENT_SECRET`: OAuth client secret from Google Cloud Console
-- `SESSION_COOKIE_SECURE`: should stay `true` in production over HTTPS
+- `APP_PORT` พอร์ตฝั่ง host ที่จะเปิดให้เข้าเว็บ
+- `DB_HOST` ที่อยู่ PostgreSQL
+- `DB_PORT` พอร์ต PostgreSQL
+- `DB_NAME` ชื่อฐานข้อมูล
+- `DB_USER` ชื่อผู้ใช้ฐานข้อมูล
+- `DB_PASS` รหัสผ่านฐานข้อมูล
+- `SECRET_KEY` ค่า secret ของ Flask session
+- `GOOGLE_CLIENT_ID` Google OAuth client id
+- `GOOGLE_CLIENT_SECRET` Google OAuth client secret
 
 ## Google OAuth Setup
 
-Create or reuse a Google OAuth client in Google Cloud Console:
+ตั้งค่าที่ Google Cloud Console ดังนี้:
 
-1. Open `Google Cloud Console`
-2. Select the correct project
-3. Go to `APIs & Services` > `Credentials`
-4. Create or open an `OAuth 2.0 Client ID`
-5. Choose `Web application`
-6. Add the production callback URL to `Authorized redirect URIs`
+1. เข้า `APIs & Services`
+2. ไปที่ `Credentials`
+3. สร้างหรือแก้ `OAuth 2.0 Client ID`
+4. เลือกประเภท `Web application`
+5. เพิ่ม callback URL ให้ตรงกับ URL ของระบบ
 
-Example redirect URI:
+ตัวอย่าง callback:
 
 ```text
 https://your-domain/login/google/callback
 ```
 
-For this deployment, the redirect URI should be:
+ข้อสำคัญ:
 
-```text
-https://voting.thiraphat.work/login/google/callback
+ในโค้ดตอนนี้ route `/login` สร้าง callback แบบนี้:
+
+```python
+url_for("google_callback", _external=True, _scheme="https")
 ```
 
-## Local Development
+ดังนั้น callback จะเป็น `https` เสมอ ถ้า deploy หลัง reverse proxy หรือ domain จริง ต้องตั้ง Google OAuth ให้ตรงกับ URL นั้นแบบเป๊ะ
 
-### 1. Install dependencies
+## วิธีรันในเครื่อง
+
+### 1. สร้าง virtual environment
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### 2. ติดตั้ง dependency
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Set up PostgreSQL
+### 3. สร้างฐานข้อมูล
 
-Create the database, then run:
+ตัวอย่าง:
 
 ```bash
-psql -U postgres -d voting -f schema.sql
+createdb voting
+psql -d voting -f schema.sql
 ```
 
-Adjust the command if your database name or user differs.
+### 4. เพิ่มแอดมินอย่างน้อย 1 คน
 
-### 3. Create `.env`
+ตัวอย่าง:
 
-Copy the example and fill in real values:
+```sql
+INSERT INTO admins (email) VALUES ('your-admin@gmail.com');
+```
+
+### 5. สร้าง `.env`
 
 ```bash
 cp .env.example .env
 ```
 
-### 4. Run the app
+แล้วใส่ค่าจริงของ database และ Google OAuth
+
+### 6. รันแอป
 
 ```bash
 python3 voting_app.py
 ```
 
-The application listens on port `8080` by default unless `PORT` or container config overrides it.
+ค่า default ของแอป:
 
-## Docker Deployment
+```text
+http://127.0.0.1:8080
+```
 
-Build and start the service:
+## วิธี deploy ด้วย Docker
+
+เริ่มรัน:
 
 ```bash
 docker compose up -d --build
 ```
 
-### Deployment Notes
+ดู log:
 
-- The container listens on internal port `8080`.
-- The host port is controlled by `APP_PORT`.
-- `docker-compose.yml` loads environment variables from `.env`.
-- Gunicorn runs the Flask app in production.
+```bash
+docker compose logs -f
+```
 
-If PostgreSQL runs on the same host machine instead of another container:
+หยุด:
 
-- Set `DB_HOST` to a reachable host IP or DNS name.
-- On Linux, `host.docker.internal` may need extra host-gateway mapping.
+```bash
+docker compose down
+```
 
-## Reverse Proxy Notes
+หมายเหตุ:
 
-This app expects to run behind HTTPS in production.
+- container เปิดพอร์ตภายในที่ `8080`
+- พอร์ตภายนอกถูกกำหนดด้วย `APP_PORT`
+- `docker-compose.yml` โหลดค่าจาก `.env`
+- Gunicorn ใช้ app object จาก `voting_app:app`
 
-- `ProxyFix` is enabled for forwarded host and protocol handling.
-- `SESSION_COOKIE_SECURE=true` means cookies are only sent over HTTPS.
-- Google OAuth callback URLs must use the public HTTPS domain.
+## Deploy สำหรับเครื่อง `10.33.1.34`
 
-If the reverse proxy does not forward `X-Forwarded-Proto` correctly, OAuth redirects and secure session behavior may fail.
+กรณี deploy ไปเครื่องนี้ โครงสร้างที่ใช้อยู่คือ:
 
-## Common Issues
+- app path: `~/voting-webapp`
+- run ผ่าน `docker compose`
+- เปิดเว็บผ่านพอร์ต `8083`
 
-### Google login shows `Missing required parameter: client_id`
+ตัวอย่าง `.env` สำหรับเครื่องนี้:
 
-Cause:
+```env
+APP_PORT=8083
+DB_HOST=10.33.1.34
+DB_PORT=5432
+DB_NAME=voting
+DB_USER=voting_app
+DB_PASS=your-db-password
 
-- `GOOGLE_CLIENT_ID` is missing or empty in the server environment.
+SECRET_KEY=your-secret-key
 
-Fix:
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+```
 
-1. Open Google Cloud Console
-2. Copy the OAuth `Client ID`
-3. Put it in `.env` as `GOOGLE_CLIENT_ID`
-4. Restart the application or container
+ขั้นตอน deploy:
 
-### Google login shows `redirect_uri_mismatch`
+```bash
+cd ~/voting-webapp
+docker compose up -d --build
+```
 
-Cause:
+เช็กสถานะ:
 
-- The callback URL in Google Cloud Console does not exactly match the URL generated by the app.
+```bash
+docker ps
+curl -I http://127.0.0.1:8083/login_page
+```
 
-Fix:
+URL ใช้งานใน LAN:
 
-- Add the exact production callback URL:
-  `https://voting.thiraphat.work/login/google/callback`
+```text
+http://10.33.1.34:8083
+```
 
-### Session is lost after returning from Google login
+ถ้าจะใช้ Google login จริงบนเครื่องนี้ ต้องเช็กว่า callback URL ใน Google Cloud ตรงกับ URL ที่เปิดใช้งานจริง
 
-Possible causes:
+## วิธีใช้ฝั่งแอดมิน
 
-- `SECRET_KEY` is missing or changes between restarts
-- Secure cookies are enabled but the site is not served over HTTPS
-- Reverse proxy headers are not forwarded correctly
+ผู้ใช้ที่จะเข้า `/admin` ได้ ต้องมีอีเมลอยู่ในตาราง `admins`
 
-### Database connection fails
+ตัวอย่าง:
 
-Check:
+```sql
+INSERT INTO admins (email) VALUES ('your-admin@gmail.com');
+```
+
+สิ่งที่หน้า admin ทำได้:
+
+- เพิ่ม candidate
+- ลบ candidate
+- reset `users` และ `votes`
+
+## รูปแบบข้อมูลจาก `/data`
+
+ตัวอย่าง response:
+
+```json
+{
+  "labels": ["Alice", "Bob"],
+  "votes": [3, 5]
+}
+```
+
+## Export Excel
+
+route `/excel` จะสร้างไฟล์ `.xlsx` ที่เก็บ:
+
+- ชื่อ candidate
+- จำนวน vote
+
+## Reverse Proxy และ HTTPS
+
+แอปรองรับ reverse proxy ผ่าน:
+
+```python
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+```
+
+ถ้า deploy หลัง Nginx, Traefik หรือ Cloudflare:
+
+- ต้อง forward `X-Forwarded-Proto`
+- ต้อง forward `Host`
+- URL public ต้องตรงกับ callback URL ใน Google OAuth
+
+## ข้อจำกัดของเวอร์ชันปัจจุบัน
+
+- ใช้ global database connection และ cursor
+- `/delete/<id>` ยังใช้ `GET`
+- callback OAuth ถูก fix เป็น `https`
+- ยังไม่มี `/health`
+- โค้ดค่อนข้างตรงไปตรงมาตามเวอร์ชันต้นฉบับ ยังไม่ได้ refactor สำหรับ production scale สูง
+
+## ปัญหาที่พบบ่อย
+
+### `redirect_uri_mismatch`
+
+สาเหตุ:
+
+- callback URL ใน Google Cloud Console ไม่ตรงกับที่แอปสร้าง
+
+วิธีแก้:
+
+- เพิ่ม URL callback ที่ตรงจริงใน Google Cloud Console
+
+### เข้า `/admin` แล้วขึ้น `Access Denied`
+
+สาเหตุ:
+
+- อีเมล Google ยังไม่อยู่ในตาราง `admins`
+
+วิธีแก้:
+
+- เพิ่มอีเมลนั้นลงใน `admins`
+
+### ขึ้น `You already voted`
+
+สาเหตุ:
+
+- บัญชีนี้เคยโหวตแล้ว
+
+วิธีแก้:
+
+- เป็น behavior ปกติ
+- ถ้าจะทดสอบใหม่ ให้ reset ผ่าน `/admin`
+
+### ต่อ PostgreSQL ไม่ได้
+
+ให้เช็ก:
 
 - `DB_HOST`
 - `DB_PORT`
 - `DB_NAME`
 - `DB_USER`
 - `DB_PASS`
-- PostgreSQL network accessibility from the app container
-
-## Project Structure
-
-```text
-.
-├── voting_app.py
-├── schema.sql
-├── requirements.txt
-├── Dockerfile
-├── docker-compose.yml
-├── templates/
-│   ├── admin.html
-│   ├── dash.html
-│   ├── home.html
-│   └── login.html
-└── docs/
-    └── SYSTEM_FLOWCHART.md
-```
+- firewall และ listen address ของ PostgreSQL
 
 ## Security Notes
 
-- Do not commit `.env` with real secrets.
-- Use a strong `SECRET_KEY`.
-- Keep `SESSION_COOKIE_SECURE=true` for production.
-- Restrict admin access by controlling entries in the `admins` table.
-- Consider converting destructive admin routes such as `/delete/<id>` to `POST` in a later hardening pass.
+- ห้าม commit `.env`
+- ถ้า secret เคยหลุด ให้ rotate ทันที
+- ใช้ `SECRET_KEY` ที่เดายาก
+- จำกัดอีเมลแอดมินเฉพาะคนที่เชื่อถือได้
+- ถ้าเปิดใช้งานจริง ควรใช้ HTTPS
 
-## Future Improvements
+## License
 
-- Add CSRF protection for admin and voting forms
-- Add explicit validation and friendlier error pages
-- Add health checks and structured logging
-- Add unit and integration tests
-- Add containerized PostgreSQL for fully self-contained local development
-- Improve admin authorization and audit logging
+ตอนนี้ repo ยังไม่มีไฟล์ license ถ้าจะเผยแพร่ต่อสาธารณะควรเพิ่มให้ชัดเจน
