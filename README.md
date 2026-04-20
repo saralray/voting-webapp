@@ -2,7 +2,7 @@
 
 Open-source voting web application built with Next.js and PostgreSQL.
 
-**Flowchart source:** [docs/SYSTEM_FLOWCHART.md](/home/thiraphat/voting-webapp/docs/SYSTEM_FLOWCHART.md)  
+**Flowchart source:** [docs/SYSTEM_FLOWCHART.md](./docs/SYSTEM_FLOWCHART.md)  
 **License:** [MIT](./LICENSE)
 
 ## What This Project Is
@@ -195,7 +195,6 @@ npm install
 ```
 
 ### Run in development
-
 ```bash
 npm run dev
 ```
