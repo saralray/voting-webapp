@@ -4,11 +4,11 @@ This document summarizes the current runtime flow of the voting application.
 
 ```mermaid
 flowchart TD
-    A[User opens login page] --> B[Click Login with Google]
-    B --> C[Flask /login]
+    A[User opens login page route slash login_page] --> B[Click Login with Google]
+    B --> C[Flask login route slash login]
     C --> D[Redirect to Google OAuth]
     D --> E[User authenticates with Google]
-    E --> F[Flask /login/google/callback]
+    E --> F[Flask callback route slash login slash google slash callback]
     F --> G[Google userinfo API]
     G --> H[Store user profile in Flask session]
     H --> I[Redirect to home page]
@@ -23,18 +23,18 @@ flowchart TD
     P --> Q[Insert vote]
     Q --> R[Render response]
 
-    S[Admin accesses /admin] --> T{Session exists}
+    S[Admin accesses route slash admin] --> T{Session exists}
     T -- No --> C
     T -- Yes --> U[Check email in admins table]
     U --> V{Authorized admin}
     V -- No --> W[Return Access Denied]
     V -- Yes --> X[Manage candidates or reset votes]
 
-    Y[Dashboard page] --> Z[Request /data]
+    Y[Dashboard page route slash dashboard] --> Z[Request data route slash data]
     Z --> AA[Aggregate votes by candidate]
     AA --> AB[Return JSON]
 
-    AC[Excel export request] --> AD[Aggregate votes]
+    AC[Excel export route slash excel] --> AD[Aggregate votes]
     AD --> AE[Generate XLSX with OpenPyXL]
     AE --> AF[Send file download]
 ```
